@@ -17,8 +17,9 @@ export class InvoiceContext {
     private readonly invoiceComposer = resolve(InvoiceComposer);
     private readonly invoiceCalculator = resolve(InvoiceCalculator);
     // Overview
-    draftPage: DocumentPageDto = { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true };
-    invoicePage: DocumentPageDto = { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true };
+    draftPage: DocumentPageDto = undefined;
+    invoicePage: DocumentPageDto = undefined;
+    activeBox: string = 'ALL';
     // Current invoice
     lines: undefined | InvoiceLine[] | CreditNoteLine[];
     @observable selectedInvoice: undefined | Invoice | CreditNote;
@@ -28,11 +29,24 @@ export class InvoiceContext {
     nextInvoiceReference: string = undefined;
     readOnly: boolean = false;
     partnerMissing: boolean = false;
+    addPdfToSendingInvoice: boolean = false;
 
     clearSelectedInvoice() {
-        history.replaceState({}, '', `/invoices`);
         this.selectedInvoice = undefined;
         this.selectedDocument = undefined;
+        this.activeBox = 'ALL';
+    }
+
+    setActiveBoxFromDocument(doc: DocumentDto) {
+        if (doc?.draftedOn) {
+            this.activeBox = 'DRAFTS';
+        } else if (doc?.direction === DocumentDirection.INCOMING) {
+            this.activeBox = DocumentDirection.INCOMING;
+        } else if (doc?.direction === DocumentDirection.OUTGOING) {
+            this.activeBox = DocumentDirection.OUTGOING;
+        } else {
+            this.activeBox = 'ALL';
+        }
     }
 
     selectedInvoiceChanged(newValue: UBLDoc) {
@@ -70,6 +84,7 @@ export class InvoiceContext {
                 this.ea.publish('alert', { alertType: AlertType.Danger, text: "Failed to get company info" });
             }
         }
+        this.addPdfToSendingInvoice = this.companyService.myCompany.addPdfToSendingInvoice;
     }
 
     newUBLDocument(documentType: DocumentType = DocumentType.INVOICE) {

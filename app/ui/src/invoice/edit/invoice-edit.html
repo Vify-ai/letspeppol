@@ -38,6 +38,10 @@
             </h1>
         </div>
         <div class="editor-header-actions">
+            <label if.bind="!readOnly" class="field checkbox">
+                <input type="checkbox" checked.bind="invoiceContext.addPdfToSendingInvoice" />
+                <span t="account.add-pdf-to-sending-invoice">Add pdf to sending invoice</span>
+            </label>
             <button if.bind="!readOnly" type="button" class="btn" click.trigger="saveAsDraft()">
                 <span if.bind="invoiceContext.selectedDraft" t="invoice.edit.update-draft">Update draft</span>
                 <span if.bind="!invoiceContext.selectedDraft" t="invoice.edit.save-draft">Save draft</span>
@@ -55,7 +59,7 @@
             <button if.bind="invoiceContext.selectedDraft && !readOnly" type="button" class="btn" click.trigger="deleteDraft()">
                 <span t="invoice.edit.delete-draft">Delete draft</span>
             </button>
-            <button type="button" class="btn" click.trigger="invoiceContext.clearSelectedInvoice()" t="invoice.edit.cancel">Cancel</button>
+            <button type="button" class="btn" click.trigger="returnToOverview()" t="invoice.edit.cancel">Cancel</button>
             <button if.bind="!readOnly" type="button" class="btn primary" click.trigger="verifyNumberAndSend()" disabled.bind="!isValid" t="invoice.edit.send.${selectedDocumentType}">Send invoice</button>
         </div>
     </div>

@@ -20,6 +20,7 @@ import {toErrorResponse} from "../../app/util/error-response-handler";
 import {PartnerService} from "../../services/app/partner-service";
 import {PaymentInfo} from "./components/tiles/payment-info";
 import moment, {Moment} from "moment";
+import {IRouter} from "@aurelia/router";
 
 export class InvoiceEdit {
     readonly ea: IEventAggregator = resolve(IEventAggregator);
@@ -27,6 +28,7 @@ export class InvoiceEdit {
     private invoiceContext = resolve(InvoiceContext);
     private invoiceComposer = resolve(InvoiceComposer);
     private partnerService = resolve(PartnerService);
+    private router = resolve(IRouter);
     private newInvoiceSubscription: IDisposable;
     private newCreditNoteSubscription: IDisposable;
     private previousSaveDate: undefined | Moment;
@@ -41,6 +43,11 @@ export class InvoiceEdit {
     @bindable invoiceNumberModal: InvoiceNumberModal;
     @bindable validationResultModal: ValidationResultModal;
     @bindable paymentInfo: PaymentInfo;
+
+    returnToOverview() {
+        this.invoiceContext.setActiveBoxFromDocument(this.invoiceContext.selectedDocument);
+        this.router.load('/invoices');
+    }
 
     bound() {
         this.newInvoiceSubscription = this.ea.subscribe('newInvoice', () => this.newInvoice());
@@ -99,13 +106,13 @@ export class InvoiceEdit {
                 return;
             }
 
-            const doc = await this.invoiceService.createDocument(xml);
+            const doc = await this.invoiceService.createDocument(xml, this.invoiceContext.addPdfToSendingInvoice);
             this.ea.publish('alert', {alertType: AlertType.Success, text: "Invoice sent successfully"});
             this.invoiceContext.invoicePage.content.unshift(doc);
             if (this.invoiceContext.selectedDocument.draftedOn) {
                 await this.deleteDraft();
             } else {
-                this.invoiceContext.clearSelectedInvoice();
+                this.returnToOverview();
             }
         } catch (e: unknown) {
             const errorResponse = await toErrorResponse(e);
@@ -141,13 +148,13 @@ export class InvoiceEdit {
                 const newDraft = await this.invoiceService.updateDocument(this.invoiceContext.selectedDocument.id, xml, true);
                 this.invoiceContext.draftPage.content.splice(this.invoiceContext.draftPage.content.findIndex(item => item.id === newDraft.id), 1, newDraft);
             } else {
-                const documentDraftDto = await this.invoiceService.createDocument(xml, true);
+                const documentDraftDto = await this.invoiceService.createDocument(xml, false, true);
                 this.invoiceContext.selectedDocument = documentDraftDto;
                 this.invoiceContext.draftPage.content.unshift(documentDraftDto);
                 this.invoiceContext.draftPage.totalElements++;
             }
             if (returnToOverview) {
-                this.invoiceContext.clearSelectedInvoice();
+                this.returnToOverview();
             }
             this.ea.publish('alert', {alertType: AlertType.Success, text: "Invoice draft saved"});
         } catch(e) {
@@ -167,7 +174,7 @@ export class InvoiceEdit {
         try {
             await this.invoiceService.deleteDocument(this.invoiceContext.selectedDocument.id);
             this.invoiceContext.deleteDraft(this.invoiceContext.selectedDocument);
-            this.invoiceContext.clearSelectedInvoice();
+            this.returnToOverview();
             this.ea.publish('alert', {alertType: AlertType.Success, text: "Invoice draft removed"});
         } catch(e) {
             console.error(e);
